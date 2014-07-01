@@ -2,9 +2,10 @@
 #include "dxbase.h"
 #include "shader.h"
 #include "camera.h"
+#include "mesh.hpp"
 
 #define MOUSE_SENSITIVITY 20.f
-#define MOVESPEED 0.05f
+#define MOVESPEED 0.02f
 
 DxBase *window;
 FirstPersonCamera cam;
@@ -56,7 +57,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	devcon.RSSetViewports(1, &viewport);
 
 	cam.init(45, wnd.getAspect(), 1.f, 500.f);
-	cam.setPos(fl3(0, 0, 10));
+	cam.setPos(fl3(0, 0, -10)); // negative starting position for LH coordinate system
 
 	// shaders
 	VertexShader vs (dev, L"ssao.hlsl");
@@ -69,6 +70,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		{0.45f, -0.5, 0.0f, D3DXCOLOR(0.0f, 1.0f, 0.0f, 1.0f)},
 		{-0.45f, -0.5f, 0.0f, D3DXCOLOR(0.0f, 0.0f, 1.0f, 1.0f)}
 	};
+	/*
 	ID3D11Buffer *pVBuffer;
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory(&bd, sizeof(bd));
@@ -84,8 +86,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	devcon.Map(pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
 	memcpy(ms.pData, vertices, sizeof(vertices));
 	devcon.Unmap(pVBuffer, NULL);
+	//*/
+	// try doing it with the mesh class instead
+	InterleavedMesh<VERTEX, UINT8> mesh (D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	mesh.addVert(vertices[0])
+		.addVert(vertices[1])
+		.addVert(vertices[2]);
+	mesh.addInd(0).addInd(1).addInd(2);
+	mesh.finalize(dev);
 
 	// create input layout
+	// TODO: should this be a property of the mesh or its own separate thing?
 	D3D11_INPUT_ELEMENT_DESC ied[] = 
 	{
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -111,15 +122,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             window->holdCursor(false);
         }
         if (window->isMouseDown(MOUSE_RIGHT)) {
-            fl2 dxdy = window->getMouseNorm_dxdy();
+            fl2 dxdy = window->getMouseNorm_dxdy(); // dxdy is relative to top left, positive y is down, positive x is right
+			// looking right is negative rotation around y axis
+			// looking down is negative rotation around x axis
             cam.rotate(fl2(-MOUSE_SENSITIVITY * dxdy.y, -MOUSE_SENSITIVITY * dxdy.x));
         }
         fl3 tomove;
         if(window->isKeyDown(KEY_W)) {
-            tomove.z -= 1.f;
+            tomove.z += 1.f; // positive Z is forward in LH coordinate system
         }
         if(window->isKeyDown(KEY_S)) {
-            tomove.z += 1.f;
+            tomove.z -= 1.f;
         }
         if(window->isKeyDown(KEY_A)) {
             tomove.x -= 1.f;
@@ -143,21 +156,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		// matrix stuff
 		cam.toMatrixView(matrices.view);
 		cam.toMatrixProj(matrices.proj);
+		D3DXMatrixIdentity(&matrices.model);
+
 		// send matrices to constant buffer
 		ID3D11Buffer *matrixBuffer = 0;
 		D3D11_BUFFER_DESC matrixBufferDesc;
 		D3D11_MAPPED_SUBRESOURCE cbufresource;
 
 		// transpose necessary for D3D11 (and OpenGL)
-		//D3DXMatrixTranspose(&matrices.model, &matrices.model);
+		D3DXMatrixTranspose(&matrices.model, &matrices.model);
 		D3DXMatrixTranspose(&matrices.view, &matrices.view);
 		D3DXMatrixTranspose(&matrices.proj, &matrices.proj);
-
-		//ZeroMemory(&matrices.proj, sizeof(D3DXMATRIX));
-		//matrices.proj._11 = 1;
-		//matrices.proj._22 = 1;
-		//matrices.proj._33 = 1;
-		//matrices.proj._44 = 1;
 
 		// descriptor for constant buffer object
 		matrixBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
@@ -170,15 +179,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		HRESULT bufresult;
 		// map the buffer and copy over the data
 		bufresult = dev.CreateBuffer(&matrixBufferDesc, NULL, &matrixBuffer);
-		if (FAILED(bufresult)) {
-			DxBase::ThrowError(L"createbuffer failed");
-			return 1;
-		}
 		bufresult = devcon.Map(matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbufresource);
-		if (FAILED(bufresult)) {
-			DxBase::ThrowError(L"map failed");
-			return 1;
-		}
 		MVPMatrices *matrixBufferPtr = (MVPMatrices *) cbufresource.pData;
 		matrixBufferPtr->model = matrices.model;
 		matrixBufferPtr->view = matrices.view;
@@ -195,9 +196,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		// drawing
 		UINT stride = sizeof(VERTEX);
 		UINT offset = 0;
-		devcon.IASetVertexBuffers(0, 1, &pVBuffer, &stride, &offset);
-		devcon.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		devcon.Draw(3, 0);
+		//devcon.IASetVertexBuffers(0, 1, &pVBuffer, &stride, &offset);
+		//devcon.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		//devcon.Draw(3, 0);
+		mesh.draw(dev, devcon);
 
 		wnd.finishFrame();
 		Sleep(1);

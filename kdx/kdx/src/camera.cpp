@@ -26,7 +26,8 @@ void Camera::init(float fovy, float aspect, float zNear, float zFar)
 
 void Camera::toMatrixProj(D3DXMATRIX &matrix) const
 {
-	D3DXMatrixPerspectiveFovRH(&matrix, fovy_, aspect_, zNear_, zFar_);
+	//D3DXMatrixPerspectiveFovRH(&matrix, fovy_, aspect_, zNear_, zFar_);
+	D3DXMatrixPerspectiveFovLH(&matrix, fovy_, aspect_, zNear_, zFar_);
 }
 
 Camera& Camera::rotate(fl2 &torot)
@@ -79,16 +80,20 @@ FirstPersonCamera::~FirstPersonCamera() {}
 Camera& FirstPersonCamera::move(fl3 &tomove)
 {
 	float r = tomove.z * cos(DEGTORAD(rot_.x));
-    pos_.x += r * sin(DEGTORAD(rot_.y)) + tomove.x * cos(DEGTORAD(rot_.y));
-    pos_.z += r * cos(DEGTORAD(rot_.y)) - tomove.x * sin(DEGTORAD(rot_.y));
-    pos_.y += tomove.y - tomove.z * sin(DEGTORAD(rot_.x));
+	// in LH coordinates, positive Z is moving forward, so r is positive
+	// to switch from RH, just negate rot_.y for sins
+    pos_.x += r * sin(DEGTORAD(-rot_.y)) + tomove.x * cos(DEGTORAD(rot_.y));
+    pos_.z += r * cos(DEGTORAD(rot_.y)) - tomove.x * sin(DEGTORAD(-rot_.y));
+    pos_.y += tomove.y + tomove.z * sin(DEGTORAD(rot_.x)); // becomes a + in LH coordinates
     return *this;
 }
 
 void FirstPersonCamera::toMatrixView(D3DXMATRIX &matrix) const
 {
-	float pitch = DEGTORAD(-rot_.x);
-	float yaw = DEGTORAD(-rot_.y);
+	// for RH coordinate system we want pitch/yaw to be negative camera rotation angles
+	// for LH, we want positive
+	float pitch = DEGTORAD(rot_.x);
+	float yaw = DEGTORAD(rot_.y);
 	D3DXMATRIX rotationMatrix;
 	D3DXMATRIX translationMatrix;
 

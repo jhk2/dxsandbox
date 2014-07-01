@@ -53,8 +53,8 @@ VOut VertexMain(float4 position : POSITION, float4 color : COLOR)
 {
     VOut output;
 	//position.w = 1.0f;
-    output.position = position;
-	//output.position = mul(position, model);
+    //output.position = position;
+	output.position = mul(position, model);
 	output.position = mul(position, view);
 	output.position = mul(output.position, proj);
     output.color = color;

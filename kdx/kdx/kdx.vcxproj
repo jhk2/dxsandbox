@@ -64,7 +64,7 @@
       <AdditionalDependencies>libjpeg.lib;libpng15.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Lib>
     <Lib>
-      <AdditionalLibraryDirectories>G:\dxsandbox\kdx\kdx\src\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>src/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -88,7 +88,7 @@
       <AdditionalDependencies>libjpeg.lib;libpng15.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Lib>
     <Lib>
-      <AdditionalLibraryDirectories>G:\dxsandbox\kdx\kdx\src\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>src/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -103,6 +103,7 @@
     <ClInclude Include="src\constants.h" />
     <ClInclude Include="src\dxbase.h" />
     <ClInclude Include="src\matrix.h" />
+    <ClInclude Include="src\mesh.hpp" />
     <ClInclude Include="src\shader.h" />
     <ClInclude Include="src\test.h" />
     <ClInclude Include="src\utils.h" />

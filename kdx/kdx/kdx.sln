@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kdx", "kdx.vcxproj", "{416F7163-7CAB-406C-A77A-975EE170B627}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ao", "samples\ao\ao.vcxproj", "{7F599CFD-7786-46AA-A11C-E70658AD4963}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{416F7163-7CAB-406C-A77A-975EE170B627}.Debug|Win32.ActiveCfg = Debug|Win32
+		{416F7163-7CAB-406C-A77A-975EE170B627}.Debug|Win32.Build.0 = Debug|Win32
+		{416F7163-7CAB-406C-A77A-975EE170B627}.Release|Win32.ActiveCfg = Release|Win32
+		{416F7163-7CAB-406C-A77A-975EE170B627}.Release|Win32.Build.0 = Release|Win32
+		{7F599CFD-7786-46AA-A11C-E70658AD4963}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7F599CFD-7786-46AA-A11C-E70658AD4963}.Debug|Win32.Build.0 = Debug|Win32
+		{7F599CFD-7786-46AA-A11C-E70658AD4963}.Release|Win32.ActiveCfg = Release|Win32
+		{7F599CFD-7786-46AA-A11C-E70658AD4963}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

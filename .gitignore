@@ -1,0 +1,15 @@
+# visual studio binaries
+Debug/
+Release/
+ipch/
+# visual studio user files
+*.sdf
+*.suo
+*.user
+# shader compile log
+shader_errors.txt
+# external libraries
+include/
+lib/
+# assets
+assets/

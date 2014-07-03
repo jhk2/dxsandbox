@@ -2,7 +2,7 @@
 #include "dxbase.h"
 #include "shader.h"
 #include "camera.h"
-#include "mesh.hpp"
+#include "obj.h"
 
 #define MOUSE_SENSITIVITY 20.f
 #define MOVESPEED 0.02f
@@ -95,12 +95,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	mesh.addInd(0).addInd(1).addInd(2);
 	mesh.finalize(dev);
 
+	Obj servbot (dev, devcon, L"../assets/ServerBot1.obj");
+
 	// create input layout
 	// TODO: should this be a property of the mesh or its own separate thing?
 	D3D11_INPUT_ELEMENT_DESC ied[] = 
 	{
+		//{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		//{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
 	};
 	ID3D11InputLayout *pLayout = vs.setInputLayout(dev, ied, 2);
 	devcon.IASetInputLayout(pLayout);
@@ -199,7 +204,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		//devcon.IASetVertexBuffers(0, 1, &pVBuffer, &stride, &offset);
 		//devcon.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		//devcon.Draw(3, 0);
-		mesh.draw(dev, devcon);
+		//mesh.draw(dev, devcon);
+		servbot.draw(dev, devcon);
 
 		wnd.finishFrame();
 		Sleep(1);

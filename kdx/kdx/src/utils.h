@@ -26,6 +26,7 @@ struct Vector {
 typedef Vector<float, 2> fl2;
 typedef Vector<float, 3> fl3;
 typedef Vector<int, 2> int2;
+typedef Vector<int, 3> int3;
 
 // template specialization for commonly used ones
 template <>
@@ -78,6 +79,26 @@ struct Vector<int, 2> {
 	};
 	Vector() : x(0), y(0) {}
 	Vector(const int nx, const int ny) : x(nx), y(ny) {}
+	int& operator[](const int index)
+	{
+		return data[index];
+	}
+	const int& operator[](const int index) const
+	{
+		return data[index];
+	}
+};
+
+template <>
+struct Vector<int, 3> {
+	union {
+		int data[3];
+		struct { int x, y, z; };
+		struct { int s, t, r; };
+		struct { int r, g, b; };
+	};
+	Vector() : x(0), y(0), z(0) {}
+	Vector(const int nx, const int ny, const int nz) : x(nx), y(ny), z(nz) {}
 	int& operator[](const int index)
 	{
 		return data[index];

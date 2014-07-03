@@ -40,7 +40,7 @@ public:
 		ibufdesc.Usage = D3D11_USAGE_DEFAULT;
 		ibufdesc.ByteWidth = sizeof(IND_TYPE) * indexcount_;
 		ibufdesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		ibufdesc.CPUAccessFlags = 0;
+		ibufdesc.CPUAccessFlags = 0; // WORKNOTE: if we use map+memcpy, this needs to be CPU_ACCESS_WRITE
 		ibufdesc.MiscFlags = 0;
 
 		D3D11_SUBRESOURCE_DATA subr;

@@ -95,8 +95,10 @@
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\dxbase.cpp" />
     <ClCompile Include="src\matrix.cpp" />
+    <ClCompile Include="src\obj.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\test.cpp" />
+    <ClCompile Include="src\texture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\camera.h" />
@@ -104,8 +106,10 @@
     <ClInclude Include="src\dxbase.h" />
     <ClInclude Include="src\matrix.h" />
     <ClInclude Include="src\mesh.hpp" />
+    <ClInclude Include="src\obj.h" />
     <ClInclude Include="src\shader.h" />
     <ClInclude Include="src\test.h" />
+    <ClInclude Include="src\texture.h" />
     <ClInclude Include="src\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -5,7 +5,7 @@ cbuffer Matrices
 	matrix view;
 	matrix proj;
 };
-/*
+
 // vertex shader input
 struct VSInput
 {
@@ -13,7 +13,7 @@ struct VSInput
 	float4 tex : TEXTURE;
 	float4 norm : NORMAL;
 };
-
+/*
 struct PSInput
 {
 	float4 posn : SV_POSITION;
@@ -49,15 +49,16 @@ struct VOut
     float4 color : COLOR;
 };
 
-VOut VertexMain(float4 position : POSITION, float4 color : COLOR)
+VOut VertexMain(VSInput input)
 {
+	float4 position = input.pos;
     VOut output;
 	//position.w = 1.0f;
     //output.position = position;
 	output.position = mul(position, model);
 	output.position = mul(position, view);
 	output.position = mul(output.position, proj);
-    output.color = color;
+    output.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
 	
 	//matrix projcopy = proj;
 	//float4 multed = mul(position, projcopy);

@@ -1,6 +1,7 @@
 #include "obj.h"
 #include <assert.h>
 #include <string>
+#include "sampler.h"
 
 Obj::Obj(ID3D11Device &dev, ID3D11DeviceContext &devcon, LPCWSTR filename) : currentcombo_(0), min_(), max_()
 {
@@ -24,9 +25,16 @@ void Obj::draw(ID3D11Device &dev, ID3D11DeviceContext &devcon)
 {
 	 for (std::map<std::wstring, std::pair<ObjMesh *, ObjMaterial *>>::const_iterator iter = meshes_.begin(); iter != meshes_.end(); iter++) {
 		 ObjMaterial &curmat = *(iter->second.second);
-		 // set constant buffers eventually
+		 // set constant buffer (input slot 1)
+		 devcon.PSSetConstantBuffers(1, 1, &curmat.materialbuffer);
 
-		 // also set textures/samplers
+		 // also set textures
+		 curmat.map_Ka->use(devcon, 0);
+		 curmat.map_Kd->use(devcon, 1);
+		 curmat.map_Ks->use(devcon, 2);
+
+		 // use default color texture sampler
+		 Sampler::GetDefaultSampler(dev).use(devcon, 0);
 
 		 // draw the actual mesh
 		 ObjMesh &curmesh = *(iter->second.first);
@@ -256,7 +264,8 @@ bool Obj::loadMaterials(ID3D11Device &dev, ID3D11DeviceContext &devcon, LPCWSTR 
 	D3D11_BUFFER_DESC bufferdesc;
 	ZeroMemory(&bufferdesc, sizeof(D3D11_BUFFER_DESC));
 	bufferdesc.Usage = D3D11_USAGE_DEFAULT;
-	bufferdesc.ByteWidth = sizeof(ObjMaterial);
+	// constant buffer must have size of multiple 16 bytes
+	bufferdesc.ByteWidth = 16 * (sizeof(ObjMaterial) / 16) + (((sizeof(ObjMaterial) % 16) > 0) ? 16 : 0 ); // round up to the nearest 16 byte boundary
 	bufferdesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bufferdesc.CPUAccessFlags = 0; // WORKNOTE: if we use map+memcpy, this needs to be CPU_ACCESS_WRITE
 	bufferdesc.MiscFlags = 0;
@@ -269,7 +278,6 @@ bool Obj::loadMaterials(ID3D11Device &dev, ID3D11DeviceContext &devcon, LPCWSTR 
 		ZeroMemory(&subr, sizeof(D3D11_SUBRESOURCE_DATA));
 		subr.pSysMem = &mat->cbuffer;
 
-		// TODO: THIS IS FAILING CURRENTLY
 		HRESULT result = dev.CreateBuffer(&bufferdesc, &subr, &mat->materialbuffer);
 		if (FAILED(result)) {
 			return false;
@@ -301,7 +309,8 @@ Obj::ObjMesh* Obj::createPTNMesh(ID3D11Device &dev, ID3D11DeviceContext &devcon,
 			fwscanf_s(file, L"%u/%u/%u %u/%u/%u %u/%u/%u", &v[0].x, &v[0].y, &v[0].z, &v[1].x, &v[1].y, &v[1].z, &v[2].x, &v[2].y, &v[2].z);
 			// check if each of them is contained
 			PTNvert vert;
-			for (int i = 0; i < 3; i++) {
+			// WORKNOTE: for LH coordinate systems, reverse order to make frontface/backface go the right ways
+			for (int i = 2; i >=0; i--) {
 				int3 &cur = v[i];
 				if (combos_.find(cur) == combos_.end()) {
 					//~ printf("making new vertex entry for combo %u/%u/%u index %u\n", cur.x, cur.y, cur.z, currentcombo_); fflush(stdout);
@@ -356,7 +365,8 @@ Obj::ObjMesh* Obj::createPTMesh(ID3D11Device &dev, ID3D11DeviceContext &devcon, 
 			//~ }
 			// check if each of them is contained
 			PTvert vert;
-			for (int i = 0; i < 3; i++) {
+			// WORKNOTE: for LH coordinate systems, reverse order to make frontface/backface go the right ways
+			for (int i = 2; i >=0; i--) {
 				int3 &cur = v[i];
 				if (combos_.find(cur) == combos_.end()) {
 					combos_[cur] = currentcombo_;
@@ -404,7 +414,8 @@ Obj::ObjMesh* Obj::createPNMesh(ID3D11Device &dev, ID3D11DeviceContext &devcon, 
 			fwscanf_s(file, L"%u//%u %u//%u %u//%u", &v[0].x, &v[0].y, &v[1].x, &v[1].y, &v[2].x, &v[2].y);
 			// check if each of them is contained
 			PNvert vert;
-			for (int i = 0; i < 3; i++) {
+			// WORKNOTE: for LH coordinate systems, reverse order to make frontface/backface go the right ways
+			for (int i = 2; i >=0; i--) {
 				int3 &cur = v[i];
 				if (combos_.find(cur) == combos_.end()) {
 					combos_[cur] = currentcombo_;
@@ -449,7 +460,8 @@ Obj::ObjMesh* Obj::createPMesh(ID3D11Device &dev, ID3D11DeviceContext &devcon, F
 			fwscanf_s(file, L"%u/%u %u/%u %u/%u", &v[0].x, &v[1].x, &v[2].x);
 			// check if each of them is contained
 			fl3 vert;
-			for (int i = 0; i < 3; i++) {
+			// WORKNOTE: for LH coordinate systems, reverse order to make frontface/backface go the right ways
+			for (int i = 2; i >=0; i--) {
 				int3 &cur = v[i];
 				if (combos_.find(cur) == combos_.end()) {
 					combos_[cur] = currentcombo_;

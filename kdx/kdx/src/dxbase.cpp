@@ -118,7 +118,9 @@ DxBase::MessageHandler DxBase::addMessageHandler(long message, MessageHandler ha
     MessageIterator it = messagemap_.find(message);
     if(it != messagemap_.end())
         m = it->second;
-    messagemap_.insert(std::pair<long, MessageHandler>(message, handler));
+	// insert doesn't replace if element already exists
+    //messagemap_.insert(std::pair<long, MessageHandler>(message, handler));
+	messagemap_[message] = handler;
     return m;
 }
 
@@ -233,6 +235,7 @@ void DxBase::resize(unsigned int width, unsigned int height)
 {
 	width_ = width;
 	height_ = height;
+	resizeD3D();
 }
 
 void DxBase::swapBuffers()
@@ -400,6 +403,37 @@ long DxBase::OnMouseUpR(DxBase &wnd, HWND hwnd, WPARAM wparam, LPARAM lparam)
     return true;
 }
 
+void DxBase::createRenderTargets()
+{
+	// assuming that swap chain is properly initialized, create the color and depth render targets
+	// get the address of the texture
+	swapchain_->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID *) &backbuffertex_);
+	// use the address to make the render target object
+	device_->CreateRenderTargetView(backbuffertex_, NULL, &backbuffer_);
+
+	// create depth target
+	D3D11_TEXTURE2D_DESC depthDesc;
+	ZeroMemory(&depthDesc, sizeof(D3D11_TEXTURE2D_DESC));
+	depthDesc.Width = width_;
+	depthDesc.Height = height_;
+	depthDesc.MipLevels = 1;
+	depthDesc.ArraySize = 1;
+	depthDesc.Format = DXGI_FORMAT_D16_UNORM;
+	depthDesc.SampleDesc.Count = 1;
+	depthDesc.SampleDesc.Quality = 0;
+	depthDesc.Usage = D3D11_USAGE_DEFAULT;
+	depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	depthDesc.CPUAccessFlags = 0;
+	depthDesc.MiscFlags = 0;
+
+	device_->CreateTexture2D(&depthDesc, NULL, &depthbuffertex_);
+	// WORKNOTE: look into depth/stencil state for more complex usage
+	device_->CreateDepthStencilView(depthbuffertex_, NULL, &depthbuffer_);
+	// for now, just permanently bind this default depth buffer to output merger
+	// set this render target as the back buffer
+	devicecontext_->OMSetRenderTargets(1, &backbuffer_, depthbuffer_);
+}
+
 void DxBase::initD3D()
 {
 	DXGI_SWAP_CHAIN_DESC swapChainDesc;
@@ -413,9 +447,10 @@ void DxBase::initD3D()
 	swapChainDesc.Windowed = TRUE;
 
 	// create the device, context, and swap chain with this struct data
-	D3D11CreateDeviceAndSwapChain(NULL, 
+	HRESULT result = D3D11CreateDeviceAndSwapChain(NULL, 
 		D3D_DRIVER_TYPE_HARDWARE,
-		NULL, NULL, NULL, NULL, 
+		NULL, NULL, // this can be D3D11_CREATE_DEVICE_DEBUG, but debugging needs to be installed properly
+		NULL, NULL, 
 		D3D11_SDK_VERSION, 
 		&swapChainDesc, 
 		&swapchain_, 
@@ -423,22 +458,31 @@ void DxBase::initD3D()
 		NULL, 
 		&devicecontext_);
 
-	// set up the back render buffer
-	// get the address of the texture
-	ID3D11Texture2D *backBufferTex;
-	swapchain_->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID *) &backBufferTex);
-	// use the address to make the render target object
-	device_->CreateRenderTargetView(backBufferTex, NULL, &backbuffer_);
-	backBufferTex->Release();
+	createRenderTargets();
+}
 
-	// set this render target as the back buffer
-	devicecontext_->OMSetRenderTargets(1, &backbuffer_, NULL);
+void DxBase::resizeD3D()
+{
+	// release all existing buffers in the swap chain + the depth buffer
+	// TODO: resizing is messing up the depth buffer
+	devicecontext_->OMSetRenderTargets(0, 0, 0);
+	backbuffer_->Release();
+	backbuffertex_->Release();
+	depthbuffer_->Release();
+	depthbuffertex_->Release();
+	// resize the buffers
+	swapchain_->ResizeBuffers(0, width_, height_, DXGI_FORMAT_UNKNOWN, 0); // just resizes and keeps all else the same
+	// get the handles to the buffers again
+	createRenderTargets();
 }
 
 void DxBase::finishD3D()
 {
 	swapchain_->Release();
 	backbuffer_->Release();
+	backbuffertex_->Release();
+	depthbuffer_->Release();
+	depthbuffertex_->Release();
 	device_->Release();
 	devicecontext_->Release();
 }

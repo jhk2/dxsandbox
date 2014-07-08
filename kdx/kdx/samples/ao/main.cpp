@@ -3,9 +3,10 @@
 #include "shader.h"
 #include "camera.h"
 #include "obj.h"
+#include "framebuffer.h"
 
 #define MOUSE_SENSITIVITY 20.f
-#define MOVESPEED 0.02f
+#define MOVESPEED 0.05f
 
 DxBase *window;
 FirstPersonCamera cam;
@@ -32,6 +33,8 @@ long OnResize(DxBase &wnd, HWND hwnd, WPARAM wparam, LPARAM lparam)
 	viewport.TopLeftY = 0;
 	viewport.Width = FLOAT(window->getWidth());
 	viewport.Height = FLOAT(window->getHeight());
+	viewport.MinDepth = 0.f;
+	viewport.MaxDepth = 1.0f; // WORKNOTE: if you don't set these on resize, things mess up; what are the defaults?
 
 	wnd.getDeviceContext().RSSetViewports(1, &viewport);
 	return 0;
@@ -53,6 +56,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	viewport.TopLeftY = 0;
 	viewport.Width = FLOAT(window->getWidth());
 	viewport.Height = FLOAT(window->getHeight());
+	viewport.MinDepth = 0.f;
+	viewport.MaxDepth = 1.0f;
 
 	devcon.RSSetViewports(1, &viewport);
 
@@ -62,6 +67,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// shaders
 	VertexShader vs (dev, L"ssao.hlsl");
 	PixelShader ps (dev, L"ssao.hlsl");
+
+	// framebuffers
+	FramebufferParams params;
+	params.width = wnd.getWidth();
+	params.height = wnd.getHeight();
+	params.numSamples = 1;
+	params.numMrts = 1;
+	params.colorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+	params.depthEnable = true;
+	params.depthFormat = DXGI_FORMAT_D16_UNORM;
+	Framebuffer fb (dev, params);
 
 	// temporarily putting my vertex buffer init stuff here
 	VERTEX vertices[] =
@@ -105,9 +121,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		//{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
 	};
-	ID3D11InputLayout *pLayout = vs.setInputLayout(dev, ied, 2);
+	// WORKNOTE: input element descriptor must exactly match fields in the shader source
+	// and setInputLayout must be called with the correct number of items or else
+	// input layout creation will fail
+	ID3D11InputLayout *pLayout = vs.setInputLayout(dev, ied, 3);
 	devcon.IASetInputLayout(pLayout);
 
 	MVPMatrices matrices;
@@ -156,7 +175,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         cam.move(tomove);
 
 		// do graphics stuff
-		devcon.ClearRenderTargetView(&wnd.getBackBuffer(), D3DXCOLOR(0.0f, 0.2f, 0.4f, 1.0f));
+		//fb.use(devcon);
+
+		devcon.ClearRenderTargetView(&wnd.getBackBuffer(), D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f));
+		devcon.ClearDepthStencilView(&wnd.getDepthBuffer(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 		// matrix stuff
 		cam.toMatrixView(matrices.view);
@@ -206,6 +228,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		//devcon.Draw(3, 0);
 		//mesh.draw(dev, devcon);
 		servbot.draw(dev, devcon);
+
+		// blit fb to screen
+		//fb.blit(wnd);
 
 		wnd.finishFrame();
 		Sleep(1);

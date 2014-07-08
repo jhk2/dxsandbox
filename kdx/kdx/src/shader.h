@@ -26,7 +26,7 @@ private:
 	virtual HRESULT compileFromFile(LPCWSTR filename, ID3D10Blob **errorMessage) = 0;
 	virtual HRESULT initShader(ID3D11Device &device) = 0;
 protected:
-	void init(ID3D11Device &device, LPCWSTR filename);
+	bool init(ID3D11Device &device, LPCWSTR filename);
 	ID3D10Blob *buffer_;
 };
 

@@ -23,9 +23,10 @@
 
 Shader::Shader(ID3D11Device &device, LPCWSTR filename)
 {
+	// can't call pure virtual methods in constructor
 }
 
-void Shader::init(ID3D11Device &device, LPCWSTR filename)
+bool Shader::init(ID3D11Device &device, LPCWSTR filename)
 {
 	HRESULT result;
 	ID3D10Blob *errorMessage = 0;
@@ -38,20 +39,25 @@ void Shader::init(ID3D11Device &device, LPCWSTR filename)
 		} else {
 			DxBase::ThrowError(L"Missing Shader File");
 		}
+		return false;
+	} else {
+		result = initShader(device);
+		if (FAILED(result)) {
+			DxBase::ThrowError(L"shader init failed");
+			return false;
+		}
 	}
-
-	result = initShader(device);
-
-	if (FAILED(result)) {
-		DxBase::ThrowError(L"shader init failed");
-	}
+	return true;
+	
 	// WORKNOTE: access violation when I try to release this, so probably don't need to
 	//errorMessage->Release();
 }
 
 VertexShader::VertexShader(ID3D11Device &device, LPCWSTR filename) : Shader(device, filename)
 {
-	init(device, filename);
+	if (!init(device, filename)) {
+		exit(1);
+	}
 }
 
 VertexShader::~VertexShader()
@@ -62,7 +68,7 @@ VertexShader::~VertexShader()
 
 HRESULT VertexShader::compileFromFile(LPCWSTR filename, ID3D10Blob **errorMessage)
 {
-	HRESULT test = D3DX11CompileFromFile(filename, NULL, NULL, "VertexMain", "vs_4_0", NULL, NULL, NULL, &buffer_, errorMessage, NULL);
+	HRESULT test = D3DX11CompileFromFile(filename, NULL, NULL, "VertexMain", "vs_5_0", NULL, NULL, NULL, &buffer_, errorMessage, NULL);
 	return test;
 }
 
@@ -74,13 +80,15 @@ HRESULT VertexShader::initShader(ID3D11Device &device)
 ID3D11InputLayout* VertexShader::setInputLayout(ID3D11Device &device, D3D11_INPUT_ELEMENT_DESC *desc, UINT numElements)
 {
 	ID3D11InputLayout *pLayout;
-	device.CreateInputLayout(desc, numElements, buffer_->GetBufferPointer(), buffer_->GetBufferSize(), &pLayout);
+	HRESULT result = device.CreateInputLayout(desc, numElements, buffer_->GetBufferPointer(), buffer_->GetBufferSize(), &pLayout);
 	return pLayout;
 }
 
 PixelShader::PixelShader(ID3D11Device &device, LPCWSTR filename) : Shader(device, filename)
 {
-	init(device, filename);
+	if (!init(device, filename)) {
+		exit(1);
+	}
 }
 
 PixelShader::~PixelShader()
@@ -91,7 +99,7 @@ PixelShader::~PixelShader()
 
 HRESULT PixelShader::compileFromFile(LPCWSTR filename, ID3D10Blob **errorMessage)
 {
-	return D3DX11CompileFromFile(filename, NULL, NULL, "PixelMain", "ps_4_0", NULL, NULL, NULL, &buffer_, errorMessage, NULL);
+	return D3DX11CompileFromFile(filename, NULL, NULL, "PixelMain", "ps_5_0", NULL, NULL, NULL, &buffer_, errorMessage, NULL);
 }
 
 HRESULT PixelShader::initShader(ID3D11Device &device)

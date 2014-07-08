@@ -61,7 +61,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>libjpeg.lib;libpng15.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Lib>
     <Lib>
       <AdditionalLibraryDirectories>src/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -85,7 +85,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Lib>
-      <AdditionalDependencies>libjpeg.lib;libpng15.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Lib>
     <Lib>
       <AdditionalLibraryDirectories>src/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -94,8 +94,10 @@
   <ItemGroup>
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\dxbase.cpp" />
+    <ClCompile Include="src\framebuffer.cpp" />
     <ClCompile Include="src\matrix.cpp" />
     <ClCompile Include="src\obj.cpp" />
+    <ClCompile Include="src\sampler.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\test.cpp" />
     <ClCompile Include="src\texture.cpp" />
@@ -104,9 +106,11 @@
     <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\constants.h" />
     <ClInclude Include="src\dxbase.h" />
+    <ClInclude Include="src\framebuffer.h" />
     <ClInclude Include="src\matrix.h" />
     <ClInclude Include="src\mesh.hpp" />
     <ClInclude Include="src\obj.h" />
+    <ClInclude Include="src\sampler.h" />
     <ClInclude Include="src\shader.h" />
     <ClInclude Include="src\test.h" />
     <ClInclude Include="src\texture.h" />

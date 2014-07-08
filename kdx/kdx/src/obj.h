@@ -24,8 +24,9 @@ private:
 			union {
 				FLOAT d, Tr; // transparency (can have both notations)
 			};
-			fl3 Tf; // transmission filter (allows only certain colors through)
 			FLOAT padding0;
+			fl3 Tf; // transmission filter (allows only certain colors through)
+			
 
 			UINT32 illum; // illumination model
 			// 0 means constant illumination (color = Kd)
@@ -34,15 +35,16 @@ private:
 			// there's more at http://en.wikipedia.org/wiki/Wavefront_.obj_file
 			// but these are the basics
 
-			// WORKNOTE: Padding should hopefully not be necessary
+			// we need padding to make vectors not straddle 16 byte boundaries
+			// http://msdn.microsoft.com/en-us/library/windows/desktop/bb509632%28v=vs.85%29.aspx
 			fl3 Ka; // ambient color
-			//FLOAT padding1;
+			FLOAT padding1;
 			fl3 Kd; // diffuse color
-			//FLOAT padding2;
+			FLOAT padding2;
 			fl3 Ks; // specular color
-			//FLOAT padding3;
+			FLOAT padding3;
 			fl3 Ke; // emissive color
-			//FLOAT padding4;
+			FLOAT padding4;
 		} cbuffer;
 		std::wstring name;
 

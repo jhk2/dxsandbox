@@ -114,14 +114,22 @@ private:
 	IDXGISwapChain *swapchain_;
 	ID3D11Device *device_;
 	ID3D11DeviceContext *devicecontext_;
+	ID3D11Texture2D *backbuffertex_;
 	ID3D11RenderTargetView *backbuffer_;
+	ID3D11Texture2D *depthbuffertex_;
+	ID3D11DepthStencilView *depthbuffer_;
 
-public:
+	void createRenderTargets();
 	void initD3D();
+	void resizeD3D();
 	void finishD3D();
+
+	friend class Framebuffer; // give framebuffer access to swapchain for blits
+public:
 	ID3D11Device& getDevice() { return *device_; }
 	ID3D11DeviceContext& getDeviceContext() { return *devicecontext_; }
 	ID3D11RenderTargetView& getBackBuffer() { return *backbuffer_; }
+	ID3D11DepthStencilView& getDepthBuffer() { return *depthbuffer_; }
 };
 
 // enum for virtual key codes

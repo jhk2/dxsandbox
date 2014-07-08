@@ -97,7 +97,13 @@ void FirstPersonCamera::toMatrixView(D3DXMATRIX &matrix) const
 	D3DXMATRIX rotationMatrix;
 	D3DXMATRIX translationMatrix;
 
-	D3DXMatrixRotationYawPitchRoll(&rotationMatrix, yaw, pitch, 0);
+	//D3DXMatrixRotationYawPitchRoll(&rotationMatrix, yaw, pitch, 0);
+	// WORKNOTE: yawpitchroll is not giving me the same results as separate x and y rotation
+	// TODO: find out why this is
+	D3DXMatrixRotationX(&rotationMatrix, pitch);
+	D3DXMATRIX rotationy;
+	D3DXMatrixRotationY(&rotationy, yaw);
+	D3DXMatrixMultiply(&rotationMatrix, &rotationy, &rotationMatrix);
 	D3DXMatrixTranslation(&translationMatrix, -pos_.x, -pos_.y, -pos_.z);
 
 	D3DXMatrixMultiply(&matrix, &translationMatrix, &rotationMatrix);

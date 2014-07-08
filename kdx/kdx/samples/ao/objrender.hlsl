@@ -1,3 +1,4 @@
+// basic shader to render an obj mesh with textures and material parameters
 // matrices
 cbuffer Matrices : register(b0)
 {
@@ -61,7 +62,6 @@ PSInput VertexMain(VSInput input)
 float4 PixelMain(PSInput input) : SV_TARGET
 {
 	float4 final = float4(0, 0, 0, 0);
-	//final = map_Ka.Sample(sampler_Ka, input.tex.xy);
 	final += float4(Ka.r, Ka.g, Ka.b, 1.0) * map_Ka.Sample(sampler_default, input.tex.xy);
 	final += float4(Kd.r, Kd.g, Kd.b, 1.0) * map_Kd.Sample(sampler_default, input.tex.xy);
 	final += float4(Ks.r, Ks.g, Ks.b, 1.0) * map_Ks.Sample(sampler_default, input.tex.xy);

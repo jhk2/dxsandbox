@@ -130,6 +130,7 @@ public:
 	ID3D11DeviceContext& getDeviceContext() { return *devicecontext_; }
 	ID3D11RenderTargetView& getBackBuffer() { return *backbuffer_; }
 	ID3D11DepthStencilView& getDepthBuffer() { return *depthbuffer_; }
+	void useDefaultFramebuffer();
 };
 
 // enum for virtual key codes

@@ -302,19 +302,19 @@ static Vector<float, 3> cross(const Vector<float, 3> &first, const Vector<float,
 
 // some common vertex structs
 struct PTNvert {
-	fl3 pos_;
-	fl3 tex_;
-	fl3 norm_;
+	fl3 pos;
+	fl3 tex;
+	fl3 norm;
 };
 
 struct PTvert {
-	fl3 pos_;
-	fl3 tex_;
+	fl3 pos;
+	fl3 tex;
 };
 
 struct PNvert {
-	fl3 pos_;
-	fl3 norm_;
+	fl3 pos;
+	fl3 norm;
 };
 
 #endif // UTILS_H

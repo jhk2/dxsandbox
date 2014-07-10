@@ -318,10 +318,10 @@ Obj::ObjMesh* Obj::createPTNMesh(ID3D11Device &dev, ID3D11DeviceContext &devcon,
 					//inds_.push_back(currentcombo_);
 					mesh->addInd(currentcombo_);
 					currentcombo_++;
-					vert.pos_ = verts_[cur.x - 1];
-					vert.tex_ = texs_[cur.y - 1];
-					vert.norm_ = norms_[cur.z - 1];
-					//~ printf("adding new vertex combo index %u pos %f,%f,%f (%u) tex %f,%f,%f (%u)\n", currentcombo_, vert.pos_.x, vert.pos_.y, vert.pos_.z, cur.x-1, vert.tex_.x, vert.tex_.y, vert.tex_.z, cur.y-1); fflush(stdout);
+					vert.pos = verts_[cur.x - 1];
+					vert.tex = texs_[cur.y - 1];
+					vert.norm = norms_[cur.z - 1];
+					//~ printf("adding new vertex combo index %u pos %f,%f,%f (%u) tex %f,%f,%f (%u)\n", currentcombo_, vert.pos.x, vert.pos.y, vert.pos.z, cur.x-1, vert.tex.x, vert.tex.y, vert.tex.z, cur.y-1); fflush(stdout);
 					mesh->addVert(vert);
 				} else {
 					//~ printf("found existing entry for combo %u/%u/%u index %u\n", cur.x, cur.y, cur.z, combos_[cur]); fflush(stdout);
@@ -373,8 +373,8 @@ Obj::ObjMesh* Obj::createPTMesh(ID3D11Device &dev, ID3D11DeviceContext &devcon, 
 					//inds_.push_back(currentcombo_);
 					mesh->addInd(currentcombo_);
 					currentcombo_++;
-					vert.pos_ = verts_[cur.x - 1];
-					vert.tex_ = texs_[cur.y - 1];
+					vert.pos = verts_[cur.x - 1];
+					vert.tex = texs_[cur.y - 1];
 					mesh->addVert(vert);
 				} else {
 					//inds_.push_back(combos_[cur]);
@@ -422,8 +422,8 @@ Obj::ObjMesh* Obj::createPNMesh(ID3D11Device &dev, ID3D11DeviceContext &devcon, 
 					//inds_.push_back(currentcombo_);
 					mesh->addInd(currentcombo_);
 					currentcombo_++;
-					vert.pos_ = verts_[cur.x - 1];
-					vert.norm_ = norms_[cur.y - 1];
+					vert.pos = verts_[cur.x - 1];
+					vert.norm = norms_[cur.y - 1];
 					mesh->addVert(vert);
 				} else {
 					//inds_.push_back(combos_[cur]);

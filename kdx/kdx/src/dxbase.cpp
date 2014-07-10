@@ -403,6 +403,11 @@ long DxBase::OnMouseUpR(DxBase &wnd, HWND hwnd, WPARAM wparam, LPARAM lparam)
     return true;
 }
 
+void DxBase::useDefaultFramebuffer()
+{
+	devicecontext_->OMSetRenderTargets(1, &backbuffer_, depthbuffer_);
+}
+
 void DxBase::createRenderTargets()
 {
 	// assuming that swap chain is properly initialized, create the color and depth render targets
@@ -431,7 +436,7 @@ void DxBase::createRenderTargets()
 	device_->CreateDepthStencilView(depthbuffertex_, NULL, &depthbuffer_);
 	// for now, just permanently bind this default depth buffer to output merger
 	// set this render target as the back buffer
-	devicecontext_->OMSetRenderTargets(1, &backbuffer_, depthbuffer_);
+	useDefaultFramebuffer();
 }
 
 void DxBase::initD3D()

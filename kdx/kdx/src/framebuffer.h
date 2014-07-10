@@ -4,6 +4,7 @@
 #include <D3D11.h>
 
 class DxBase;
+struct D3DXCOLOR;
 
 // initialization parameters
 struct FramebufferParams {
@@ -31,6 +32,7 @@ public:
 	void blit(DxBase &base);
 
 	void resize(ID3D11Device &dev, UINT width, UINT height);
+	void clear(ID3D11DeviceContext &devcon, const D3DXCOLOR &color);
 private:
 	bool init(ID3D11Device &dev);
 	void free();

@@ -79,6 +79,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="objrender.hlsl" />
+    <None Include="prepass.hlsl" />
     <None Include="ssao.hlsl" />
   </ItemGroup>
   <ItemGroup>

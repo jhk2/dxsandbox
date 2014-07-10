@@ -1,28 +1,18 @@
 // matrices
 cbuffer Matrices : register(b0)
 {
-	matrix model;
-	matrix view;
 	matrix proj;
 };
-
-cbuffer ObjMaterial : register(b1)
+// inverse of projection matrix used to render the original model
+cbuffer InvCamPj : register(b1)
 {
-	float Ns : packoffset(c0);
-	float Ni : packoffset(c0.y);
-	float Tr : packoffset(c0.z);
-	float3 Tf : packoffset(c1);
-	uint illum : packoffset(c1.w);
-	float3 Ka : packoffset(c2);
-	float3 Kd : packoffset(c3);
-	float3 Ks : packoffset(c4);
-	float3 Ke : packoffset(c5);
+	matrix invCamPj;
 };
 
 // textures
-Texture2D map_Ka : register(t0);
-Texture2D map_Kd : register(t1);
-Texture2D map_Ks : register(t2);
+Texture2D normal_map : register(t0);
+Texture2D depth_map : register(t1);
+
 // samplers
 SamplerState sampler_default : register(s0);
 
@@ -30,14 +20,13 @@ SamplerState sampler_default : register(s0);
 struct VSInput
 {
 	float4 pos : POSITION;
-	float4 tex : TEXCOORD;
-	float4 norm : NORMAL;
+	float2 tex : TEXCOORD;
 };
 
 struct PSInput
 {
 	float4 pos : SV_POSITION;
-	float4 tex : TEXCOORD;
+	float2 tex : TEXCOORD;
 };
 
 PSInput VertexMain(VSInput input)
@@ -46,13 +35,7 @@ PSInput VertexMain(VSInput input)
 	
 	input.pos.w = 1.0f;
 
-	// multiply matrices
-	output.pos = mul(input.pos, model);
-	output.pos = mul(output.pos, view);
-	output.pos = mul(output.pos, proj);
-
-	//output.col = float4(input.norm.x, input.norm.y, input.norm.z, 1.0f);
-	//output.col = map_Ka.Sample(sampler_Ka, input.tex.xy); // VS does not support Sample method
+	output.pos = mul(input.pos, proj);
 	output.tex = input.tex;
 
 	return output;
@@ -60,10 +43,20 @@ PSInput VertexMain(VSInput input)
 
 float4 PixelMain(PSInput input) : SV_TARGET
 {
+	// reconstruct the view space position from the depth map
+	float start_Z = depth_map.Sample(sampler_default, input.tex).r;
+	float3 start_Pos = float3(input.tex.x, 1.0 - input.tex.y, start_Z);
+	float3 ndc_Pos = (2.0 * start_Pos) - 1.0;
+	// TODO: unproject has w of zero, that doesn't sound right
+	float4 unproject = mul(float4(ndc_Pos.x, ndc_Pos.y, ndc_Pos.z, 1.0), invCamPj);
+	float3 viewPos = unproject.xyz / unproject.w;
+
 	float4 final = float4(0, 0, 0, 0);
-	//final = map_Ka.Sample(sampler_Ka, input.tex.xy);
-	final += float4(Ka.r, Ka.g, Ka.b, 1.0) * map_Ka.Sample(sampler_default, input.tex.xy);
-	final += float4(Kd.r, Kd.g, Kd.b, 1.0) * map_Kd.Sample(sampler_default, input.tex.xy);
-	final += float4(Ks.r, Ks.g, Ks.b, 1.0) * map_Ks.Sample(sampler_default, input.tex.xy);
+	final = normal_map.Sample(sampler_default, input.tex);
+	if (unproject.w > 0) {
+		final = float4(unproject.w, unproject.w, unproject.w, 1.0);
+	} else {
+		final = float4(1.0, 1.0, 1.0, 1.0);
+	}
 	return final;
 }

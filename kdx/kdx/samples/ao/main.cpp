@@ -4,6 +4,7 @@
 #include "camera.h"
 #include "obj.h"
 #include "framebuffer.h"
+#include "sampler.h"
 
 #define MOUSE_SENSITIVITY 20.f
 #define MOVESPEED 0.05f
@@ -67,6 +68,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// shaders
 	VertexShader vs (dev, L"ssao.hlsl");
 	PixelShader ps (dev, L"ssao.hlsl");
+	VertexShader prepassvs (dev, L"prepass.hlsl");
+	PixelShader prepassps (dev, L"prepass.hlsl");
 
 	// framebuffers
 	FramebufferParams params;
@@ -74,10 +77,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	params.height = wnd.getHeight();
 	params.numSamples = 1;
 	params.numMrts = 1;
-	params.colorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+	params.colorFormat = DXGI_FORMAT_R11G11B10_FLOAT;
 	params.depthEnable = true;
 	params.depthFormat = DXGI_FORMAT_D16_UNORM;
-	Framebuffer fb (dev, params);
+	Framebuffer prepassfb (dev, params);
 
 	// temporarily putting my vertex buffer init stuff here
 	VERTEX vertices[] =
@@ -86,23 +89,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		{0.45f, -0.5, 0.0f, D3DXCOLOR(0.0f, 1.0f, 0.0f, 1.0f)},
 		{-0.45f, -0.5f, 0.0f, D3DXCOLOR(0.0f, 0.0f, 1.0f, 1.0f)}
 	};
-	/*
-	ID3D11Buffer *pVBuffer;
-	D3D11_BUFFER_DESC bd;
-	ZeroMemory(&bd, sizeof(bd));
-
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(VERTEX) * 3;
-	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-	dev.CreateBuffer(&bd, NULL, &pVBuffer);
-
-	D3D11_MAPPED_SUBRESOURCE ms;
-	devcon.Map(pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
-	memcpy(ms.pData, vertices, sizeof(vertices));
-	devcon.Unmap(pVBuffer, NULL);
-	//*/
 	// try doing it with the mesh class instead
 	InterleavedMesh<VERTEX, UINT8> mesh (D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	mesh.addVert(vertices[0])
@@ -112,6 +98,32 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	mesh.finalize(dev);
 
 	Obj servbot (dev, devcon, L"../assets/ServerBot1.obj");
+
+	// full screen quad
+	InterleavedMesh<PTvert, UINT8> quad (D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	PTvert v;
+	v.pos = fl3(0, 0, 0); v.tex = fl3(0, 1, 0); quad.addVert(v);
+	v.pos = fl3(1, 0, 0); v.tex = fl3(1, 1, 0); quad.addVert(v);
+	v.pos = fl3(0, 1, 0); v.tex = fl3(0, 0, 0); quad.addVert(v);
+	v.pos = fl3(1, 1, 0); v.tex = fl3(1, 0, 0); quad.addVert(v);
+	quad.addInd(0).addInd(2).addInd(1).addInd(1).addInd(2).addInd(3);
+	quad.finalize(dev);
+	// matrices for othrographic projection (constant)
+	D3DXMATRIX fsorthoMat;
+	D3DXMatrixOrthoOffCenterLH(&fsorthoMat, 0, 1, 0, 1, 0, 1);
+	D3DXMatrixTranspose(&fsorthoMat, &fsorthoMat);
+	ID3D11Buffer *fsorthoBuffer = 0;
+	D3D11_BUFFER_DESC fsorthoDesc;
+	D3D11_SUBRESOURCE_DATA fsorthoSubr;
+	fsorthoDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	fsorthoDesc.ByteWidth = sizeof(D3DXMATRIX); // only need projection
+	fsorthoDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	fsorthoDesc.CPUAccessFlags = 0;
+	fsorthoDesc.MiscFlags = 0;
+	fsorthoDesc.StructureByteStride = 0;
+	ZeroMemory(&fsorthoSubr, sizeof(D3D11_SUBRESOURCE_DATA));
+	fsorthoSubr.pSysMem = &fsorthoMat;
+	dev.CreateBuffer(&fsorthoDesc, &fsorthoSubr, &fsorthoBuffer);
 
 	// create input layout
 	// TODO: should this be a property of the mesh or its own separate thing?
@@ -126,10 +138,36 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// WORKNOTE: input element descriptor must exactly match fields in the shader source
 	// and setInputLayout must be called with the correct number of items or else
 	// input layout creation will fail
-	ID3D11InputLayout *pLayout = vs.setInputLayout(dev, ied, 3);
-	devcon.IASetInputLayout(pLayout);
+	ID3D11InputLayout *pFsLayout = vs.setInputLayout(dev, ied, 2);
+	ID3D11InputLayout *pPrepassLayout = prepassvs.setInputLayout(dev, ied, 3);
+	//devcon.IASetInputLayout(pLayout);
 
+	// struct and buffer for camera matrices
 	MVPMatrices matrices;
+	ID3D11Buffer *matrixBuffer = 0;
+	D3D11_BUFFER_DESC matrixBufferDesc;
+	D3D11_MAPPED_SUBRESOURCE cbufresource;
+	// descriptor for constant buffer object
+	matrixBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	matrixBufferDesc.ByteWidth = sizeof(MVPMatrices);
+	matrixBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	matrixBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	matrixBufferDesc.MiscFlags = 0;
+	matrixBufferDesc.StructureByteStride = 0;
+	dev.CreateBuffer(&matrixBufferDesc, NULL, &matrixBuffer);
+
+	// extras for inverse projection matrix (used for reconstruction)
+	D3DXMATRIX invCamPj;
+	ID3D11Buffer *invCamPjBuffer = 0;
+	D3D11_BUFFER_DESC invCamPjBufferDesc;
+	D3D11_MAPPED_SUBRESOURCE invCamPjResource;
+	invCamPjBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	invCamPjBufferDesc.ByteWidth = sizeof(D3DXMATRIX);
+	invCamPjBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	invCamPjBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	invCamPjBufferDesc.MiscFlags = 0;
+	invCamPjBufferDesc.StructureByteStride = 0;
+	dev.CreateBuffer(&invCamPjBufferDesc, NULL, &invCamPjBuffer);
 
 	while (window->isActive()) {
 		window->update();
@@ -175,62 +213,56 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         cam.move(tomove);
 
 		// do graphics stuff
-		//fb.use(devcon);
-
-		devcon.ClearRenderTargetView(&wnd.getBackBuffer(), D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f));
-		devcon.ClearDepthStencilView(&wnd.getDepthBuffer(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		prepassfb.use(devcon);
+		prepassfb.clear(devcon, D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f));
 
 		// matrix stuff
 		cam.toMatrixView(matrices.view);
 		cam.toMatrixProj(matrices.proj);
 		D3DXMatrixIdentity(&matrices.model);
-
-		// send matrices to constant buffer
-		ID3D11Buffer *matrixBuffer = 0;
-		D3D11_BUFFER_DESC matrixBufferDesc;
-		D3D11_MAPPED_SUBRESOURCE cbufresource;
+		D3DXMatrixInverse(&invCamPj, NULL, &matrices.proj);
 
 		// transpose necessary for D3D11 (and OpenGL)
 		D3DXMatrixTranspose(&matrices.model, &matrices.model);
 		D3DXMatrixTranspose(&matrices.view, &matrices.view);
 		D3DXMatrixTranspose(&matrices.proj, &matrices.proj);
 
-		// descriptor for constant buffer object
-		matrixBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-		matrixBufferDesc.ByteWidth = sizeof(MVPMatrices);
-		matrixBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		matrixBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		matrixBufferDesc.MiscFlags = 0;
-		matrixBufferDesc.StructureByteStride = 0;
-
-		HRESULT bufresult;
-		// map the buffer and copy over the data
-		bufresult = dev.CreateBuffer(&matrixBufferDesc, NULL, &matrixBuffer);
-		bufresult = devcon.Map(matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbufresource);
-		MVPMatrices *matrixBufferPtr = (MVPMatrices *) cbufresource.pData;
-		matrixBufferPtr->model = matrices.model;
-		matrixBufferPtr->view = matrices.view;
-		matrixBufferPtr->proj = matrices.proj;
+		// update the constant buffers
+		devcon.Map(matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbufresource);
+		memcpy(cbufresource.pData, &matrices, sizeof(MVPMatrices));
 		devcon.Unmap(matrixBuffer, 0);
+		devcon.Map(invCamPjBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &invCamPjResource);
+		memcpy(invCamPjResource.pData, &invCamPj, sizeof(D3DXMATRIX));
+		devcon.Unmap(invCamPjBuffer, 0);
 
 		// set the constant buffer in the shader itself (slot 0 for now)
 		devcon.VSSetConstantBuffers(0, 1, &matrixBuffer);
 
 		// WORKNOTE: not setting shaders caused driver crash
-		devcon.VSSetShader(vs.get(), 0, 0);
-		devcon.PSSetShader(ps.get(), 0, 0);
+		devcon.VSSetShader(prepassvs.get(), 0, 0);
+		devcon.PSSetShader(prepassps.get(), 0, 0);
+
+		devcon.IASetInputLayout(pPrepassLayout);
 
 		// drawing
-		UINT stride = sizeof(VERTEX);
-		UINT offset = 0;
-		//devcon.IASetVertexBuffers(0, 1, &pVBuffer, &stride, &offset);
-		//devcon.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		//devcon.Draw(3, 0);
-		//mesh.draw(dev, devcon);
 		servbot.draw(dev, devcon);
 
-		// blit fb to screen
-		//fb.blit(wnd);
+		wnd.useDefaultFramebuffer();
+		devcon.ClearRenderTargetView(&wnd.getBackBuffer(), D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f));
+		devcon.ClearDepthStencilView(&wnd.getDepthBuffer(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+		// draw full screen quad for post process
+		devcon.VSSetConstantBuffers(0, 1, &fsorthoBuffer);
+		devcon.PSSetConstantBuffers(1, 1, &invCamPjBuffer);
+		devcon.VSSetShader(vs.get(), 0, 0);
+		devcon.PSSetShader(ps.get(), 0, 0);
+		devcon.IASetInputLayout(pFsLayout);
+
+		prepassfb.useColorResources(devcon, 0, 1);
+		prepassfb.useDepthResource(devcon, 1);
+		Sampler::GetDefaultSampler(dev).use(devcon, 0);
+
+		quad.draw(dev, devcon);
 
 		wnd.finishFrame();
 		Sleep(1);

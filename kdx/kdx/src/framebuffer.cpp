@@ -55,6 +55,17 @@ void Framebuffer::resize(ID3D11Device &dev, UINT width, UINT height)
 	init(dev);
 }
 
+void Framebuffer::clear(ID3D11DeviceContext &devcon, const D3DXCOLOR &color)
+{
+	for (UINT i = 0; i < params_.numMrts; i++) {
+		devcon.ClearRenderTargetView(colortargets_[i], color);
+	}
+	if (params_.depthEnable) {
+		// WORKNOTE: only clearing depth for now, need to add a stencil clear flag if necessary
+		devcon.ClearDepthStencilView(depthtarget_, D3D11_CLEAR_DEPTH, 1.0, 0);
+	}
+}
+
 bool Framebuffer::init(ID3D11Device &dev)
 {
 	if (params_.numMrts > 0) {
@@ -73,6 +84,17 @@ bool Framebuffer::init(ID3D11Device &dev)
 		colorDesc.CPUAccessFlags = 0;
 		colorDesc.MiscFlags = 0;
 
+		D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
+		rtvDesc.Format = params_.colorFormat;
+		rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		rtvDesc.Texture2D.MipSlice = 0;
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+		srvDesc.Format = params_.colorFormat;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels = 1;
+
 		// WORKNOTE: we will do individual texture 2Ds with separate render target views for now
 		// but a texture 2D array in a single render target view is another option
 		colortextures_ = new ID3D11Texture2D*[params_.numMrts];
@@ -81,8 +103,8 @@ bool Framebuffer::init(ID3D11Device &dev)
 
 		for (UINT i = 0; i < params_.numMrts; i++) {
 			dev.CreateTexture2D(&colorDesc, NULL, &colortextures_[i]);
-			dev.CreateShaderResourceView(colortextures_[i], NULL, &colorviews_[i]);
-			dev.CreateRenderTargetView(colortextures_[i], NULL, &colortargets_[i]);
+			dev.CreateShaderResourceView(colortextures_[i], &srvDesc, &colorviews_[i]);
+			dev.CreateRenderTargetView(colortextures_[i], &rtvDesc, &colortargets_[i]);
 		}
 	}
 
@@ -152,17 +174,17 @@ void Framebuffer::free()
 	DXGI_FORMAT resformat;
 	switch (depthformat)
 	{
-	case DXGI_FORMAT::DXGI_FORMAT_D16_UNORM:
-			resformat = DXGI_FORMAT::DXGI_FORMAT_R16_TYPELESS;
+	case DXGI_FORMAT_D16_UNORM:
+			resformat = DXGI_FORMAT_R16_TYPELESS;
 			break;
-	case DXGI_FORMAT::DXGI_FORMAT_D24_UNORM_S8_UINT:
-			resformat = DXGI_FORMAT::DXGI_FORMAT_R24G8_TYPELESS;
+	case DXGI_FORMAT_D24_UNORM_S8_UINT:
+			resformat = DXGI_FORMAT_R24G8_TYPELESS;
 			break;
-	case DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT:
-			resformat = DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS;
+	case DXGI_FORMAT_D32_FLOAT:
+			resformat = DXGI_FORMAT_R32_TYPELESS;
 			break;
-	case DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
-			resformat = DXGI_FORMAT::DXGI_FORMAT_R32G8X24_TYPELESS;
+	case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+			resformat = DXGI_FORMAT_R32G8X24_TYPELESS;
 			break;
 	}
 
@@ -174,17 +196,17 @@ void Framebuffer::free()
 	DXGI_FORMAT srvformat;
     switch (depthformat)
     {
-    case DXGI_FORMAT::DXGI_FORMAT_D16_UNORM:
-            srvformat = DXGI_FORMAT::DXGI_FORMAT_R16_FLOAT;
+    case DXGI_FORMAT_D16_UNORM:
+            srvformat = DXGI_FORMAT_R16_FLOAT;
             break;
-    case DXGI_FORMAT::DXGI_FORMAT_D24_UNORM_S8_UINT:
-            srvformat = DXGI_FORMAT::DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    case DXGI_FORMAT_D24_UNORM_S8_UINT:
+            srvformat = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
             break;
-    case DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT:
-            srvformat = DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT;
+    case DXGI_FORMAT_D32_FLOAT:
+            srvformat = DXGI_FORMAT_R32_FLOAT;
             break;
-    case DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
-            srvformat = DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+    case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+            srvformat = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
             break;
     }
     return srvformat;

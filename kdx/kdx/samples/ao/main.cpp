@@ -220,12 +220,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cam.toMatrixView(matrices.view);
 		cam.toMatrixProj(matrices.proj);
 		D3DXMatrixIdentity(&matrices.model);
-		D3DXMatrixInverse(&invCamPj, NULL, &matrices.proj);
+		FLOAT determinant = 1.0;
+		D3DXMatrixInverse(&invCamPj, &determinant, &matrices.proj);
 
 		// transpose necessary for D3D11 (and OpenGL)
 		D3DXMatrixTranspose(&matrices.model, &matrices.model);
 		D3DXMatrixTranspose(&matrices.view, &matrices.view);
 		D3DXMatrixTranspose(&matrices.proj, &matrices.proj);
+		D3DXMatrixTranspose(&invCamPj, &invCamPj); // we can just the inverse of the transpose here
 
 		// update the constant buffers
 		devcon.Map(matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbufresource);

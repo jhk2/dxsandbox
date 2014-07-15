@@ -6,6 +6,7 @@ ipch/
 *.sdf
 *.suo
 *.user
+*.opensdf
 # shader compile log
 shader_errors.txt
 # external libraries
@@ -13,3 +14,5 @@ include/
 lib/
 # assets
 assets/
+# NSight stuff
+nsight_profiler.cfg

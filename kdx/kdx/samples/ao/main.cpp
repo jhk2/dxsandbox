@@ -63,7 +63,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	devcon.RSSetViewports(1, &viewport);
 
 	cam.init(45, wnd.getAspect(), 1.f, 500.f);
-	cam.setPos(fl3(0, 0, -10)); // negative starting position for LH coordinate system
+	cam.setPos(fl3(0, 10, -10)); // negative starting position for LH coordinate system
 
 	// shaders
 	VertexShader vs (dev, L"ssao.hlsl");
@@ -220,14 +220,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cam.toMatrixView(matrices.view);
 		cam.toMatrixProj(matrices.proj);
 		D3DXMatrixIdentity(&matrices.model);
-		FLOAT determinant = 1.0;
-		D3DXMatrixInverse(&invCamPj, &determinant, &matrices.proj);
+		D3DXMatrixInverse(&invCamPj, NULL, &matrices.proj);
 
 		// transpose necessary for D3D11 (and OpenGL)
 		D3DXMatrixTranspose(&matrices.model, &matrices.model);
 		D3DXMatrixTranspose(&matrices.view, &matrices.view);
 		D3DXMatrixTranspose(&matrices.proj, &matrices.proj);
-		D3DXMatrixTranspose(&invCamPj, &invCamPj); // we can just the inverse of the transpose here
+		D3DXMatrixTranspose(&invCamPj, &invCamPj); // we can just use the inverse of the transpose here
 
 		// update the constant buffers
 		devcon.Map(matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbufresource);

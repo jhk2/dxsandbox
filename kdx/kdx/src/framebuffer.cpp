@@ -197,7 +197,7 @@ void Framebuffer::free()
     switch (depthformat)
     {
     case DXGI_FORMAT_D16_UNORM:
-            srvformat = DXGI_FORMAT_R16_FLOAT;
+            srvformat = DXGI_FORMAT_R16_UNORM;
             break;
     case DXGI_FORMAT_D24_UNORM_S8_UINT:
             srvformat = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;

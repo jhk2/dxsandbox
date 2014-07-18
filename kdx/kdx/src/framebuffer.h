@@ -2,6 +2,7 @@
 #define FRAMEBUFFER_H
 
 #include <D3D11.h>
+#include <vector>
 
 class DxBase;
 struct D3DXCOLOR;
@@ -9,10 +10,11 @@ struct D3DXCOLOR;
 // initialization parameters
 struct FramebufferParams {
 	UINT width, height;
-	UINT numMrts; // number of color targets
 	UINT numSamples;
+	UINT numMrts;
 	bool depthEnable;
-	DXGI_FORMAT colorFormat, depthFormat;
+	std::vector<DXGI_FORMAT> colorFormats;
+	DXGI_FORMAT depthFormat;
 };
 
 class Framebuffer {

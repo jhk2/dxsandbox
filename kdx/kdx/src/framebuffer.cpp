@@ -1,5 +1,6 @@
 #include "framebuffer.h"
 #include "dxbase.h"
+#include <assert.h>
 
 Framebuffer::Framebuffer(ID3D11Device &dev, FramebufferParams &params) : params_(params)
 {
@@ -76,7 +77,6 @@ bool Framebuffer::init(ID3D11Device &dev)
 		colorDesc.Height = params_.height;
 		colorDesc.MipLevels = 1;
 		colorDesc.ArraySize = 1;
-		colorDesc.Format = params_.colorFormat;
 		colorDesc.SampleDesc.Count = params_.numSamples;
 		colorDesc.SampleDesc.Quality = 0;
 		colorDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -85,12 +85,10 @@ bool Framebuffer::init(ID3D11Device &dev)
 		colorDesc.MiscFlags = 0;
 
 		D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
-		rtvDesc.Format = params_.colorFormat;
 		rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 		rtvDesc.Texture2D.MipSlice = 0;
 
 		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		srvDesc.Format = params_.colorFormat;
 		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MostDetailedMip = 0;
 		srvDesc.Texture2D.MipLevels = 1;
@@ -101,7 +99,11 @@ bool Framebuffer::init(ID3D11Device &dev)
 		colorviews_ = new ID3D11ShaderResourceView*[params_.numMrts];
 		colortargets_ = new ID3D11RenderTargetView*[params_.numMrts];
 
+		assert(params_.numMrts == params_.colorFormats.size());
 		for (UINT i = 0; i < params_.numMrts; i++) {
+			colorDesc.Format = params_.colorFormats[i];
+			rtvDesc.Format = params_.colorFormats[i];
+			srvDesc.Format = params_.colorFormats[i];
 			dev.CreateTexture2D(&colorDesc, NULL, &colortextures_[i]);
 			dev.CreateShaderResourceView(colortextures_[i], &srvDesc, &colorviews_[i]);
 			dev.CreateRenderTargetView(colortextures_[i], &rtvDesc, &colortargets_[i]);

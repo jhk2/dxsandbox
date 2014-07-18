@@ -309,7 +309,7 @@ Obj::ObjMesh* Obj::createPTNMesh(ID3D11Device &dev, ID3D11DeviceContext &devcon,
 			fwscanf_s(file, L"%u/%u/%u %u/%u/%u %u/%u/%u", &v[0].x, &v[0].y, &v[0].z, &v[1].x, &v[1].y, &v[1].z, &v[2].x, &v[2].y, &v[2].z);
 			// check if each of them is contained
 			PTNvert vert;
-			// WORKNOTE: for LH coordinate systems, reverse order to make frontface/backface go the right ways
+			// WORKNOTE: for LH coordinate systems, reverse order to make frontface/backface go the right ways, (CW is front for DX, CCW for GL)
 			for (int i = 2; i >=0; i--) {
 				int3 &cur = v[i];
 				if (combos_.find(cur) == combos_.end()) {

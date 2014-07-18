@@ -74,8 +74,6 @@ float4 PixelMain(PSInput input) : SV_TARGET
 	float3 viewPos = unproject.xyz / unproject.w;
 	float3 viewNorm = normal_map.Sample(sampler_default, input.tex).xyz;
 
-	//return float4(viewPos.x, viewPos.y, viewPos.z, 1.0);
-
 	// WORKNOTE: start_Z was a huge negative value at one point because we had a D16_UNORM depth target
 	// but we set the shader resource view format to R16_FLOAT instead of R16_UNORM
 
@@ -89,42 +87,16 @@ float4 PixelMain(PSInput input) : SV_TARGET
 		float3 off_ndc_Pos = (2.0 * off_start_Pos) - 1.0;
 		float4 off_unproject = mul(float4(off_ndc_Pos.x, off_ndc_Pos.y, off_ndc_Pos.z, 1.0), invCamPj);
 		float3 off_viewPos = off_unproject.xyz / off_unproject.w;
-		//return float4(off_viewPos.x, off_viewPos.y, off_viewPos.z, 1.0);
-		
+
 		float3 diff = off_viewPos.xyz - viewPos.xyz;
-		//return float4(diff.x, diff.y, diff.z, 1.0);
 		float distance = length(diff);
-		// TODO: distance is smaller in DX versus GL
-		//return float4(distance, -distance, 0, 1.0);
 		float3 diffnorm = normalize(diff);
-		//return float4(diffnorm.x, diffnorm.y, diffnorm.z, 1.0);
 		float dotx = diffnorm.x * viewNorm.x;
-		// TODO: the problem is that viewNorm is all positive (no negative values)
-		return float4(-viewNorm.x, 0, 0, 1.0);
-		if (diffnorm.x > -0.1) {
-			return float4(0, 1.0, 0, 1.0);
-		} else {
-			return float4(1.0, 0, 0, 1.0);
-		}
-		return float4(diffnorm.x, 0, 0, 1.0);
-		//return float4(dotx, -diffnorm.x, viewNorm.x, 1.0);
 
 		float occlusion = max(0.0, dot(viewNorm, diffnorm));// * SCALE / (1.0 + distance);
-		return float4(viewNorm.x*diffnorm.x, viewNorm.y*diffnorm.y, viewNorm.z*diffnorm.z, 1.0);
 		total += (1.0 - occlusion);
 	}
 
 	total /= NUM_TAPS;
 	return float4(total, total, total, 1.0);
-
-	/*
-	float4 final = float4(0, 0, 0, 0);
-	final = normal_map.Sample(sampler_default, input.tex);
-	if (unproject.w > 0) {
-		final = float4(unproject.w, unproject.w, unproject.w, 1.0);
-	} else {
-		final = float4(1.0, 0.0, 1.0, 1.0);
-	}
-	return final;
-	*/
 }

@@ -66,10 +66,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	cam.setPos(fl3(0, 10, -10)); // negative starting position for LH coordinate system
 
 	// shaders
-	VertexShader vs (dev, L"ssao.hlsl");
-	PixelShader ps (dev, L"ssao.hlsl");
+	VertexShader ssao_vs (dev, L"ssao.hlsl");
+	PixelShader ssao_ps (dev, L"ssao.hlsl");
 	VertexShader prepassvs (dev, L"prepass.hlsl");
 	PixelShader prepassps (dev, L"prepass.hlsl");
+	VertexShader hbao_vs (dev, L"hbao.hlsl");
+	PixelShader hbao_ps (dev, L"hbao.hlsl");
 
 	// framebuffers
 	FramebufferParams params;
@@ -77,7 +79,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	params.height = wnd.getHeight();
 	params.numSamples = 1;
 	params.numMrts = 1;
-	params.colorFormat = DXGI_FORMAT_R11G11B10_FLOAT;
+	// WORKNOTE: I tried using R11G11B10_FLOAT format here, but it has no sign bit
+	// so normals were positive only
+	// R32G32B32 throws an error on texture creation for some reason
+	// it seems that it is only optionally supported by certain hardware
+	params.colorFormats.push_back(DXGI_FORMAT_R32G32B32A32_FLOAT);
 	params.depthEnable = true;
 	params.depthFormat = DXGI_FORMAT_D16_UNORM;
 	Framebuffer prepassfb (dev, params);
@@ -99,6 +105,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	Obj servbot (dev, devcon, L"../assets/ServerBot1.obj");
 
+	// ground plane
+	InterleavedMesh<PTNvert, UINT8> gquad (D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	PTNvert gv;
+	gv.norm = fl3(0, 1, 0);
+	gv.pos = fl3(-50, 0, -50); gv.tex = fl3(0, 1, 0); gquad.addVert(gv);
+	gv.pos = fl3(-50, 0, 50); gv.tex = fl3(0, 0, 0); gquad.addVert(gv);
+	gv.pos = fl3(50, 0, -50); gv.tex = fl3(1, 1, 0); gquad.addVert(gv);
+	gv.pos = fl3(50, 0, 50); gv.tex = fl3(1, 0, 0); gquad.addVert(gv);
+	gquad.addInd(0).addInd(1).addInd(3).addInd(0).addInd(3).addInd(2);
+	gquad.finalize(dev);
+
 	// full screen quad
 	InterleavedMesh<PTvert, UINT8> quad (D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	PTvert v;
@@ -108,6 +125,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	v.pos = fl3(1, 1, 0); v.tex = fl3(1, 0, 0); quad.addVert(v);
 	quad.addInd(0).addInd(2).addInd(1).addInd(1).addInd(2).addInd(3);
 	quad.finalize(dev);
+
 	// matrices for othrographic projection (constant)
 	D3DXMATRIX fsorthoMat;
 	D3DXMatrixOrthoOffCenterLH(&fsorthoMat, 0, 1, 0, 1, 0, 1);
@@ -138,7 +156,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// WORKNOTE: input element descriptor must exactly match fields in the shader source
 	// and setInputLayout must be called with the correct number of items or else
 	// input layout creation will fail
-	ID3D11InputLayout *pFsLayout = vs.setInputLayout(dev, ied, 2);
+	ID3D11InputLayout *pFsLayout = ssao_vs.setInputLayout(dev, ied, 2);
 	ID3D11InputLayout *pPrepassLayout = prepassvs.setInputLayout(dev, ied, 3);
 	//devcon.IASetInputLayout(pLayout);
 
@@ -247,6 +265,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		// drawing
 		servbot.draw(dev, devcon);
+		gquad.draw(dev, devcon);
 
 		wnd.useDefaultFramebuffer();
 		devcon.ClearRenderTargetView(&wnd.getBackBuffer(), D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f));
@@ -255,8 +274,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		// draw full screen quad for post process
 		devcon.VSSetConstantBuffers(0, 1, &fsorthoBuffer);
 		devcon.PSSetConstantBuffers(1, 1, &invCamPjBuffer);
-		devcon.VSSetShader(vs.get(), 0, 0);
-		devcon.PSSetShader(ps.get(), 0, 0);
+		devcon.VSSetShader(ssao_vs.get(), 0, 0);
+		devcon.PSSetShader(ssao_ps.get(), 0, 0);
 		devcon.IASetInputLayout(pFsLayout);
 
 		prepassfb.useColorResources(devcon, 0, 1);

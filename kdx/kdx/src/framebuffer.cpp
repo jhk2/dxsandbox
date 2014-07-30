@@ -14,17 +14,32 @@ Framebuffer::~Framebuffer()
 
 void Framebuffer::use(ID3D11DeviceContext &devcon)
 {
-	devcon.OMSetRenderTargets(params_.numMrts, colortargets_, depthtarget_);
+	if (params_.numMrts > 0 && params_.depthEnable) {
+		devcon.OMSetRenderTargets(params_.numMrts, colortargets_, depthtarget_);
+	} else if (params_.depthEnable) {
+		// depth only
+		devcon.OMSetRenderTargets(0, NULL, depthtarget_);
+	} else {
+		// color only
+		devcon.OMSetRenderTargets(params_.numMrts, colortargets_, NULL);
+	}
 }
 
 void Framebuffer::useColorResources(ID3D11DeviceContext &devcon, UINT slot, UINT count)
 {
 	devcon.PSSetShaderResources(slot, count, colorviews_);
+	devcon.CSSetShaderResources(slot, count, colorviews_);
 }
 
 void Framebuffer::useDepthResource(ID3D11DeviceContext &devcon, UINT slot)
 {
 	devcon.PSSetShaderResources(slot, 1, &depthview_);
+}
+
+void Framebuffer::useColorUAVs(ID3D11DeviceContext &devcon, UINT slot, UINT count)
+{
+	// currently only sets compute shader
+	devcon.CSSetUnorderedAccessViews(slot, count, coloruavs_, 0);
 }
 
 void Framebuffer::blit(ID3D11DeviceContext &devcon, Framebuffer &other)
@@ -80,7 +95,7 @@ bool Framebuffer::init(ID3D11Device &dev)
 		colorDesc.SampleDesc.Count = params_.numSamples;
 		colorDesc.SampleDesc.Quality = 0;
 		colorDesc.Usage = D3D11_USAGE_DEFAULT;
-		colorDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		colorDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
 		colorDesc.CPUAccessFlags = 0;
 		colorDesc.MiscFlags = 0;
 
@@ -93,10 +108,15 @@ bool Framebuffer::init(ID3D11Device &dev)
 		srvDesc.Texture2D.MostDetailedMip = 0;
 		srvDesc.Texture2D.MipLevels = 1;
 
+		D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc;
+		uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+		uavDesc.Texture2D.MipSlice = 0;
+
 		// WORKNOTE: we will do individual texture 2Ds with separate render target views for now
 		// but a texture 2D array in a single render target view is another option
 		colortextures_ = new ID3D11Texture2D*[params_.numMrts];
 		colorviews_ = new ID3D11ShaderResourceView*[params_.numMrts];
+		coloruavs_ = new ID3D11UnorderedAccessView*[params_.numMrts];
 		colortargets_ = new ID3D11RenderTargetView*[params_.numMrts];
 
 		assert(params_.numMrts == params_.colorFormats.size());
@@ -104,9 +124,11 @@ bool Framebuffer::init(ID3D11Device &dev)
 			colorDesc.Format = params_.colorFormats[i];
 			rtvDesc.Format = params_.colorFormats[i];
 			srvDesc.Format = params_.colorFormats[i];
+			uavDesc.Format = params_.colorFormats[i];
 			dev.CreateTexture2D(&colorDesc, NULL, &colortextures_[i]);
 			dev.CreateShaderResourceView(colortextures_[i], &srvDesc, &colorviews_[i]);
 			dev.CreateRenderTargetView(colortextures_[i], &rtvDesc, &colortargets_[i]);
+			dev.CreateUnorderedAccessView(colortextures_[i], &uavDesc, &coloruavs_[i]);
 		}
 	}
 
@@ -153,11 +175,13 @@ void Framebuffer::free()
 	for (UINT i = 0; i < params_.numMrts; i++) {
 		colortargets_[i]->Release();
 		colorviews_[i]->Release();
+		coloruavs_[i]->Release();
 		colortextures_[i]->Release();
 	}
 	if (params_.numMrts > 0) {
 		delete[] colortargets_;
 		delete[] colorviews_;
+		delete[] coloruavs_;
 		delete[] colortextures_;
 	}
 

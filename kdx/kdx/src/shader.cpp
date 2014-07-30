@@ -106,3 +106,26 @@ HRESULT PixelShader::initShader(ID3D11Device &device)
 {
 	return device.CreatePixelShader(buffer_->GetBufferPointer(), buffer_->GetBufferSize(), NULL, &shader_);
 }
+
+ComputeShader::ComputeShader(ID3D11Device &device, LPCWSTR filename) : Shader(device, filename)
+{
+	if (!init(device, filename)) {
+		exit(1);
+	}
+}
+
+ComputeShader::~ComputeShader()
+{
+	shader_->Release();
+	buffer_->Release();
+}
+
+HRESULT ComputeShader::compileFromFile(LPCWSTR filename, ID3D10Blob **errorMessage)
+{
+	return D3DX11CompileFromFile(filename, NULL, NULL, "ComputeMain", "cs_5_0", NULL, NULL, NULL, &buffer_, errorMessage, NULL);
+}
+
+HRESULT ComputeShader::initShader(ID3D11Device &device)
+{
+	return device.CreateComputeShader(buffer_->GetBufferPointer(), buffer_->GetBufferSize(), NULL, &shader_);
+}

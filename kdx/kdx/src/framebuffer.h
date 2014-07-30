@@ -27,7 +27,11 @@ public:
 	// for binding as an input shader resource
 	void useColorResources(ID3D11DeviceContext &devcon, UINT slot, UINT count);
 	void useDepthResource(ID3D11DeviceContext &devcon, UINT slot);
+	// for binding as an unordered access view
+	void useColorUAVs(ID3D11DeviceContext &devcon, UINT slot, UINT count);
 
+	// WORKNOTE: Blitting using CopyResource is much more limited than glBlitFramebuffer
+	// in terms of compatibility in formats between the source and destination buffers
 	// copying to another framebuffer
 	void blit(ID3D11DeviceContext &devcon, Framebuffer &other);
 	// copying to default framebuffer
@@ -45,11 +49,12 @@ private:
 	ID3D11Texture2D **colortextures_;
 	ID3D11ShaderResourceView **colorviews_;
 	ID3D11RenderTargetView **colortargets_;
+	ID3D11UnorderedAccessView **coloruavs_;
 
 	ID3D11Texture2D *depthtexture_;
 	ID3D11ShaderResourceView *depthview_;
 	ID3D11DepthStencilView *depthtarget_;
 
-	FramebufferParams &params_;
+	FramebufferParams params_;
 };
 #endif // FRAMEBUFFER_H

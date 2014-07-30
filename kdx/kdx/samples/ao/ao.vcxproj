@@ -78,6 +78,8 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="blit.hlsl" />
+    <None Include="computeblur.hlsl" />
     <None Include="hbao.hlsl" />
     <None Include="objrender.hlsl" />
     <None Include="prepass.hlsl" />

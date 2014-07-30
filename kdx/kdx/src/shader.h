@@ -6,6 +6,7 @@ struct ID3D10Blob;
 struct ID3D11Device;
 struct ID3D11VertexShader;
 struct ID3D11PixelShader;
+struct ID3D11ComputeShader;
 struct ID3D11InputLayout;
 struct D3D11_INPUT_ELEMENT_DESC;
 
@@ -51,5 +52,16 @@ private:
 	virtual HRESULT compileFromFile(LPCWSTR filename, ID3D10Blob **errorMessage);
 	virtual HRESULT initShader(ID3D11Device &device);
 	ID3D11PixelShader *shader_;
+};
+
+class ComputeShader : public Shader {
+public:
+	ComputeShader(ID3D11Device &device, LPCWSTR filename);
+	virtual ~ComputeShader();
+	ID3D11ComputeShader *get() { return shader_; }
+private:
+	virtual HRESULT compileFromFile(LPCWSTR filename, ID3D10Blob **errorMessage);
+	virtual HRESULT initShader(ID3D11Device &device);
+	ID3D11ComputeShader *shader_;
 };
 #endif // SHADER_H

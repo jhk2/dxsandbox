@@ -72,6 +72,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	PixelShader prepassps (dev, L"prepass.hlsl");
 	VertexShader hbao_vs (dev, L"hbao.hlsl");
 	PixelShader hbao_ps (dev, L"hbao.hlsl");
+	VertexShader blit_vs (dev, L"blit.hlsl");
+	PixelShader blit_ps (dev, L"blit.hlsl");
+	ComputeShader blur_cs (dev, L"computeblur.hlsl");
 
 	// framebuffers
 	FramebufferParams params;
@@ -87,6 +90,31 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	params.depthEnable = true;
 	params.depthFormat = DXGI_FORMAT_D16_UNORM;
 	Framebuffer prepassfb (dev, params);
+
+	params.depthEnable = false;
+	Framebuffer finalbuf (dev, params);
+
+	params.colorFormats.clear();
+	params.colorFormats.push_back(DXGI_FORMAT_R32_FLOAT);
+	params.depthEnable = false;
+	Framebuffer aobuf (dev, params);
+
+	// depth test on/off state if necessary
+	D3D11_DEPTH_STENCIL_DESC depthOnDesc;
+	ZeroMemory(&depthOnDesc, sizeof(D3D11_DEPTH_STENCIL_DESC));
+	depthOnDesc.DepthEnable = true;
+	depthOnDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	depthOnDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depthOnDesc.StencilEnable = false;
+	ID3D11DepthStencilState *depthOnState = 0;
+	dev.CreateDepthStencilState(&depthOnDesc, &depthOnState);
+
+	D3D11_DEPTH_STENCIL_DESC depthOffDesc;
+	ZeroMemory(&depthOffDesc, sizeof(D3D11_DEPTH_STENCIL_DESC));
+	depthOffDesc.DepthEnable = false;
+	depthOffDesc.StencilEnable = false;
+	ID3D11DepthStencilState *depthOffState = 0;
+	dev.CreateDepthStencilState(&depthOffDesc, &depthOffState);
 
 	// temporarily putting my vertex buffer init stuff here
 	VERTEX vertices[] =
@@ -267,15 +295,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		servbot.draw(dev, devcon);
 		gquad.draw(dev, devcon);
 
-		wnd.useDefaultFramebuffer();
-		devcon.ClearRenderTargetView(&wnd.getBackBuffer(), D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f));
-		devcon.ClearDepthStencilView(&wnd.getDepthBuffer(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-
+		//wnd.useDefaultFramebuffer();
+		//devcon.ClearRenderTargetView(&wnd.getBackBuffer(), D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f));
+		//devcon.ClearDepthStencilView(&wnd.getDepthBuffer(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		aobuf.use(devcon);
+		aobuf.clear(devcon, D3DXCOLOR(1.0f, 0.0f, 0.0f, 1.0f));
+		
 		// draw full screen quad for post process
 		devcon.VSSetConstantBuffers(0, 1, &fsorthoBuffer);
 		devcon.PSSetConstantBuffers(1, 1, &invCamPjBuffer);
-		devcon.VSSetShader(ssao_vs.get(), 0, 0);
-		devcon.PSSetShader(ssao_ps.get(), 0, 0);
+		devcon.VSSetShader(hbao_vs.get(), 0, 0);
+		devcon.PSSetShader(hbao_ps.get(), 0, 0);
 		devcon.IASetInputLayout(pFsLayout);
 
 		prepassfb.useColorResources(devcon, 0, 1);
@@ -283,6 +313,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Sampler::GetDefaultSampler(dev).use(devcon, 0);
 
 		quad.draw(dev, devcon);
+
+		// filter ao results eventually
+		wnd.useDefaultFramebuffer();
+		devcon.CSSetShader(blur_cs.get(), 0, 0);
+		aobuf.useColorResources(devcon, 0, 1);
+		finalbuf.useColorUAVs(devcon, 0, 1);
+
+		const int2 computeSize = int2(ceil(window->getWidth() / 16.0), ceil(window->getHeight() / 16.0));
+		devcon.Dispatch(computeSize.x, computeSize.y, 1);
+
+		// WORKNOTE: have to unbind the uav before we use the texture as input to blit
+		ID3D11UnorderedAccessView *const nullarr[1] = { nullptr};
+		devcon.CSSetUnorderedAccessViews(0, 1, nullarr, 0);
+
+		// view final results
+		devcon.ClearRenderTargetView(&wnd.getBackBuffer(), D3DXCOLOR(0.0f, 1.0f, 0.0f, 1.0f));
+		devcon.ClearDepthStencilView(&wnd.getDepthBuffer(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		devcon.VSSetShader(blit_vs.get(), 0, 0);
+		devcon.PSSetShader(blit_ps.get(), 0, 0);
+		
+		//aobuf.useColorResources(devcon, 0, 1);
+		finalbuf.useColorResources(devcon, 0, 1);
+		quad.draw(dev, devcon);
+		//finalbuf.blit(*window);
 
 		wnd.finishFrame();
 		Sleep(1);

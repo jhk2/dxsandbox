@@ -109,8 +109,11 @@ float4 PixelMain(PSInput input) : SV_TARGET
             if (length(diff) < SAMPLING_RADIUS) {
                 // skip samples which are outside of our local sampling radius
                 lastDiff = diff;
-                float elevationAngle = atan(diff.z / length(diff.xy));
+				// WORKNOTE: in LH coordinate system, closer object will have smaller Z, so negative diff means higher elevation angle
+				// that is why we negate diff.z
+                float elevationAngle = atan(-diff.z / length(diff.xy));
                 horizonAngle = max(horizonAngle, elevationAngle);
+				//return float4(horizonAngle, 0, 0, 1.0);
             }
         }
         // the paper uses this attenuation but I like the other way better

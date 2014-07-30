@@ -32,5 +32,11 @@
     <None Include="hbao.hlsl">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="computeblur.hlsl">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="blit.hlsl">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
